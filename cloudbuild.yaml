@@ -43,4 +43,11 @@ steps:
       - --region=${_REGION}
       - --allow-unauthenticated
 
+# Deja registrada la imagen construida en el resultado del build.
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+
+# Obligatorio cuando el trigger usa una cuenta de servicio propia (la de Compute).
+options:
+  logging: CLOUD_LOGGING_ONLY
 
