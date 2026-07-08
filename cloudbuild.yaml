@@ -1,0 +1,46 @@
+
+substitutions:
+  _REGION: southamerica-west1   # región de Artifact Registry y Cloud Run
+  _REPO: monolito               # repositorio de imágenes en Artifact Registry
+  _SERVICE: incidentes          # nombre del servicio en Cloud Run
+
+steps:
+  # 1. Construir la imagen, etiquetada con el commit exacto ($COMMIT_SHA).
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+      - .
+
+  # 2. Ejecutar las pruebas 
+  - id: test
+    name: python:3.12-slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install --no-cache-dir -r requirements-dev.txt
+        pytest
+
+  # 3. Publicar la imagen en Artifact Registry.
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+
+  # 4. Desplegar en Cloud Run con acceso público.
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --allow-unauthenticated
+
+
